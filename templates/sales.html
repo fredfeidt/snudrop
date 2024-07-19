@@ -1,0 +1,159 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="container">
+    <h2>Total Profit: {{ total_profit }}€</h2>
+    <div class="header">
+        <button id="addSaleButton">Add Sale</button>
+        <button id="addExpenseButton">Add Expense</button>
+        <br>
+    </div>
+    <ul id="salesList">
+        {% for sale in sales %}
+        <li id="sale-{{ sale[0] }}">
+            {% if sale[1] == 0 %}
+                {{ sale[3] }}x {{ sale[2] }}   {{ sale[4] }}€
+            {% else %}
+                {{ sale[2] }}  {{ sale[4] }}€
+            {% endif %}
+            <button class="deleteSaleButton" data-id="{{ sale[0] }}">Delete</button>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+
+<div id="popupFormSale" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Add Sale</h2>
+        <label for="saleItem">Item:</label>
+        <select id="saleItem">
+            {% for item in items %}
+            <option value="{{ item }}">{{ item }}</option>
+            {% endfor %}
+        </select>
+        <br>
+        <label for="saleQuantity">Quantity:</label>
+        <input type="number" id="saleQuantity" name="quantity" min="1">
+        <br>
+        <label for="salePrice">Price (€):</label>
+        <input type="number" id="salePrice" name="price" step="0.01">
+        <br><br>
+        <button id="submitSaleButton">Add</button>
+    </div>
+</div>
+
+<div id="popupFormExpense" class="modal">
+    <div class="modal-content">
+        <span class="closeExpense">&times;</span>
+        <h2>Add Expense</h2>
+        <label for="expenseName">Name:</label>
+        <input type="text" id="expenseName" name="name">
+        <br>
+        <label for="expensePrice">Price (€):</label>
+        <input type="number" id="expensePrice" name="price" step="0.01">
+        <br><br>
+        <button id="submitExpenseButton">Add</button>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        var modalSale = $('#popupFormSale');
+        var modalExpense = $('#popupFormExpense');
+        var spanSale = $('.close');
+        var spanExpense = $('.closeExpense');
+
+        $('#addSaleButton').click(function() {
+            modalSale.show();
+        });
+
+        spanSale.click(function() {
+            modalSale.hide();
+        });
+
+        $(window).click(function(event) {
+            if (event.target == modalSale[0]) {
+                modalSale.hide();
+            }
+        });
+
+        $('#submitSaleButton').click(function() {
+            var item_id = $('#saleItem').val();
+            var quantity = $('#saleQuantity').val();
+            var price = $('#salePrice').val();
+            var maxQuantity = parseInt($('#saleItem option:selected').data('quantity'));
+
+            if (quantity > maxQuantity) {
+                alert('Quantity exceeds available stock.');
+                return;
+            }
+
+            $.ajax({
+                url: '{{ url_for("add_sale") }}',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({item_id: item_id, quantity: quantity, price: price}),
+                success: function(response) {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        alert(response.error);
+                    }
+                }
+            });
+        });
+
+        $('.deleteSaleButton').click(function() {
+            var sale_id = $(this).data('id');
+
+            $.ajax({
+                url: '{{ url_for("delete_sale") }}',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({sale_id: sale_id}),
+                success: function(response) {
+                    if (response.success) {
+                        $('#sale-' + sale_id).remove();
+                    } else {
+                        alert(response.error);
+                    }
+                }
+            });
+        });
+
+        $('#addExpenseButton').click(function() {
+            modalExpense.show();
+        });
+
+        spanExpense.click(function() {
+            modalExpense.hide();
+        });
+
+        $(window).click(function(event) {
+            if (event.target == modalExpense[0]) {
+                modalExpense.hide();
+            }
+        });
+
+        $('#submitExpenseButton').click(function() {
+            var name = $('#expenseName').val();
+            var price = $('#expensePrice').val();
+
+            $.ajax({
+                url: '{{ url_for("add_expense") }}',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({name: name, price: price}),
+                success: function(response) {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        alert(response.error);
+                    }
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}
